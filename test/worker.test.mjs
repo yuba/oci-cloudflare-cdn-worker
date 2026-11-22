@@ -2,6 +2,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
+import { rmSync } from "node:fs";
 import { unstable_dev } from "wrangler";
 
 const objects = {
@@ -13,6 +14,8 @@ const hits = [];
 let origin, worker;
 
 before(async () => {
+  // 前回実行時のキャッシュが残らないようにローカル状態を消す
+  rmSync(".wrangler/state", { recursive: true, force: true });
   origin = http.createServer((req, res) => {
     hits.push(`${req.method} ${req.url} host=${req.headers.host} range=${req.headers.range || "-"}`);
     const m = req.url.match(/^\/p\/TOKEN\/n\/ns\/b\/bkt\/o\/(.+)$/);
@@ -118,4 +121,16 @@ test("GET/HEAD 以外は 405、.. は 404", async () => {
   r = await worker.fetch("/img/%2E%2E/a.png");
   assert.equal(r.status, 404);
   await r.text();
+});
+
+test("期間指定のパース", async () => {
+  const { duration } = await import("../src/index.js");
+  assert.equal(duration("30d", 1), 2592000);
+  assert.equal(duration("5m", 1), 300);
+  assert.equal(duration("1h30m", 1), 5400);
+  assert.equal(duration("2w", 1), 1209600);
+  assert.equal(duration("600", 1), 600);
+  assert.equal(duration("0", 1), 0);
+  assert.equal(duration(undefined, 7), 7);
+  assert.equal(duration("abc", 7), 7);
 });

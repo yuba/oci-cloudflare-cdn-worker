@@ -137,13 +137,28 @@ function loadConfig(env) {
     env,
     pathPrefix: (env.PATH_PREFIX || "").replace(/^\/+/, ""),
     indexDocument: env.INDEX_DOCUMENT || "",
-    edgeTtl: int(env.EDGE_CACHE_TTL, 2592000), // 30 日
-    browserTtl: int(env.BROWSER_CACHE_TTL, 3600), // 1 時間
-    negativeTtl: int(env.NEGATIVE_CACHE_TTL, 300), // 5 分
+    edgeTtl: duration(env.EDGE_CACHE_TTL, 30 * 86400), // 既定 30 日
+    browserTtl: duration(env.BROWSER_CACHE_TTL, 3600), // 既定 1 時間
+    negativeTtl: duration(env.NEGATIVE_CACHE_TTL, 300), // 既定 5 分
     maxCacheBytes: int(env.MAX_CACHE_SIZE_MB, 512) * 1024 * 1024,
     cacheIncludeQuery: bool(env.CACHE_KEY_INCLUDE_QUERY, false),
     corsOrigin: env.CORS_ALLOW_ORIGIN || "",
   };
+}
+
+/**
+ * 期間指定を秒に変換する。単位なしは秒。s / m / h / d / w が使える（例: 30d, 5m, 1h30m）
+ * 不正な値なら既定値を使う
+ */
+export function duration(v, d) {
+  if (v === undefined || v === null || String(v).trim() === "") return d;
+  const str = String(v).trim().toLowerCase();
+  if (/^\d+$/.test(str)) return parseInt(str, 10);
+  const unit = { s: 1, m: 60, h: 3600, d: 86400, w: 604800 };
+  if (!/^(\d+[smhdw])+$/.test(str)) return d;
+  let total = 0;
+  for (const [, n, u] of str.matchAll(/(\d+)([smhdw])/g)) total += parseInt(n, 10) * unit[u];
+  return total;
 }
 
 /** リクエストパス -> オブジェクト名。各セグメントを正規化して再エンコードする */

@@ -67,6 +67,12 @@ if (e.OCI_PAR_URL) {
     if (!e[k]) die(`OCI_PAR_URL か S3 互換キーを設定してください（public モードなら ${k} が必要）`);
 }
 
+// --- キャッシュ期間の検証（30d, 5m, 3600 など） ---
+for (const k of ["EDGE_CACHE_TTL", "BROWSER_CACHE_TTL", "NEGATIVE_CACHE_TTL"]) {
+  if (e[k] && !/^\s*(\d+|(\d+[smhdw])+)\s*$/i.test(e[k]))
+    die(`${k}="${e[k]}" は不正です。秒数か 30d / 5m / 1h30m のように指定してください（単位 s m h d w）`);
+}
+
 // --- 秘密情報（暗号化して保存）と通常の変数を振り分け ---
 const SECRET_KEYS = ["OCI_PAR_URL", "OCI_ACCESS_KEY_ID", "OCI_SECRET_ACCESS_KEY"];
 const VAR_KEYS = [
