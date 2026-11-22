@@ -1,0 +1,24 @@
+{
+  "name": "oci-cloudflare-cdn-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker that serves OCI Object Storage behind Cloudflare CDN (free plan friendly)",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "deploy": "node scripts/deploy.mjs",
+    "check": "node scripts/deploy.mjs --dry-run",
+    "destroy": "node scripts/deploy.mjs --destroy",
+    "dev": "node scripts/deploy.mjs --dry-run && wrangler dev -c wrangler.generated.json",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "aws4fetch": "1.0.20"
+  },
+  "devDependencies": {
+    "wrangler": "4.166.0"
+  }
+}
