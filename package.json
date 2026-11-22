@@ -9,7 +9,7 @@
     "deploy": "node scripts/deploy.mjs",
     "check": "node scripts/deploy.mjs --dry-run",
     "destroy": "node scripts/deploy.mjs --destroy",
-    "dev": "node scripts/deploy.mjs --dry-run && wrangler dev -c wrangler.generated.json",
+    "dev": "node scripts/deploy.mjs --dry-run --skip-verify && wrangler dev -c wrangler.generated.json",
     "test": "node --test test/*.test.mjs"
   },
   "engines": {

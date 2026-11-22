@@ -2,9 +2,11 @@
 /**
  * .env を読み込み、Cloudflare に Worker・カスタムドメイン・秘密情報を一括デプロイする。
  *
- *   npm run deploy            # デプロイ
- *   npm run deploy -- --dry-run  # アップロードせずにビルドと設定生成だけ確認
- *   npm run destroy           # Worker を削除
+ *   npm run deploy   # 接続確認 → デプロイ
+ *   npm run check    # 接続確認 + ビルド確認のみ（アップロードしない）
+ *   npm run destroy  # Worker を削除
+ *
+ * オプション: --env-file=<path>  --skip-verify（接続確認を省略）
  */
 import { existsSync, writeFileSync, rmSync, mkdtempSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -18,6 +20,7 @@ process.chdir(root);
 const args = process.argv.slice(2);
 const destroy = args.includes("--destroy");
 const dryRun = args.includes("--dry-run");
+const skipVerify = args.includes("--skip-verify");
 const envFile = (args.find((a) => a.startsWith("--env-file=")) || "--env-file=.env").split("=")[1];
 
 const die = (msg) => {
@@ -42,7 +45,7 @@ const wrangler = (wargs, opts = {}) => {
 };
 
 // --- 検証 ---
-if (!dryRun) {
+if (!dryRun || !skipVerify) {
   if (!e.CLOUDFLARE_API_TOKEN) die("CLOUDFLARE_API_TOKEN が未設定です");
   if (!e.CLOUDFLARE_ACCOUNT_ID) die("CLOUDFLARE_ACCOUNT_ID が未設定です");
 }
@@ -115,6 +118,17 @@ const config = {
   routes: domains.map((pattern) => ({ pattern, custom_domain: true })),
 };
 
+// --- 接続確認 ---
+let verifyResult = { errors: [], warnings: [] };
+if (!skipVerify) {
+  const { verify } = await import("./verify.mjs");
+  console.log("");
+  verifyResult = await verify(e, { domains });
+  if (verifyResult.errors.length && !dryRun) {
+    die(`接続確認で ${verifyResult.errors.length} 件の問題が見つかったため、デプロイを中止しました（無視するなら --skip-verify）`);
+  }
+}
+
 const generated = join(root, "wrangler.generated.json");
 writeFileSync(generated, JSON.stringify(config, null, 2) + "\n");
 
@@ -148,6 +162,10 @@ try {
   rmSync(tmp, { recursive: true, force: true });
 }
 
-if (status !== 0) die("デプロイに失敗しました");
-if (dryRun) console.log("\n✔ dry-run 完了（wrangler.generated.json を確認してください）");
+if (status !== 0) die(dryRun ? "ビルドに失敗しました" : "デプロイに失敗しました");
+if (dryRun) {
+  const { errors, warnings } = verifyResult;
+  if (errors.length) die(`接続確認で ${errors.length} 件の問題があります（ビルドは成功）`);
+  console.log(`\n✔ チェック完了${skipVerify ? "（接続確認は省略）" : warnings.length ? `（警告 ${warnings.length} 件）` : ""}`);
+}
 else console.log(`\n✔ デプロイ完了${domains.length ? `: https://${domains[0]}/` : ""}`);

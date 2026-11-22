@@ -27,6 +27,8 @@ Cloudflare でキャッシュしたいところですが、無料プランでは
   | パブリック | なし | オリジンを直接叩かれると枠を消費されるので非推奨 |
 - OCI 固有のレスポンスヘッダ（`opc-request-id` 等）は除去、CORS は任意で付与
 
+> OCI を課金なしで使い続けるための設定や注意点は **[OCI Object Storage を完全無料で使うためのガイド](docs/oci-free-tier-guide.md)** にまとめています。
+
 ## 使い方
 
 前提: Node.js 20.12 以上、Cloudflare にゾーン（ドメイン）を登録済み。
@@ -49,12 +51,26 @@ npm run deploy
 
 | コマンド | 内容 |
 |---|---|
-| `npm run deploy` | デプロイ（再実行で設定更新） |
-| `npm run check` | アップロードせずにビルドと設定内容だけ確認 |
+| `npm run deploy` | 接続確認してからデプロイ（再実行で設定更新） |
+| `npm run check` | 接続確認とビルド確認だけ行う（アップロードしない） |
 | `npm run destroy` | Worker を削除 |
 | `npm test` | ローカルのモック・オリジンで動作テスト |
 
 `--env-file=path` で `.env` 以外のファイルも使えます（例: `npm run deploy -- --env-file=.env.prod`）。
+
+### 接続確認
+
+`check` と `deploy` は、最初に次の項目を実際に API を呼んで確認します。問題があれば `deploy` は中止されます（`--skip-verify` で省略可）。
+
+| 対象 | 確認内容 |
+|---|---|
+| Cloudflare API トークン | 有効か（有効期限も表示） |
+| アカウント ID | そのトークンで Workers を操作できるか |
+| `CUSTOM_DOMAIN` | ゾーンがアカウントにあるか、別の Worker に使われていないか、既存の DNS レコードがないか |
+| OCI | 存在しないオブジェクトを 1 回取得し、返ってきたエラーの種類で PAR / キー / バケット名の正否を判定（OCI の API リクエストを 1 回消費） |
+
+トークンに DNS 読取り権限がない場合、DNS レコードの確認は警告だけになります。
+S3 互換モードでバケットの一覧権限（`BUCKET_INSPECT`）がない場合は、キーが正しくても 403 になるため、警告だけになります。
 
 ### 1. Cloudflare の準備
 

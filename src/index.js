@@ -119,7 +119,7 @@ async function handle(request, env, ctx) {
 
 // ---------------------------------------------------------------------------
 
-function loadConfig(env) {
+export function loadConfig(env) {
   const int = (v, d) => {
     const n = parseInt(v ?? "", 10);
     return Number.isFinite(n) && n >= 0 ? n : d;
@@ -182,7 +182,7 @@ function encodeKey(key) {
   return key.split("/").map(encodeURIComponent).join("/");
 }
 
-async function fetchOrigin(key, cfg, method, range) {
+export async function fetchOrigin(key, cfg, method, range) {
   const headers = new Headers();
   if (range) headers.set("range", range);
   const { env } = cfg;
